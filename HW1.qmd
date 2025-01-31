@@ -1,0 +1,106 @@
+---
+author: "Jack Nowacek"
+title: "HW1"
+format: pdf
+---
+
+#### Ex 1:
+
+A helicopter with six blades is 0.66 times as likely to crash as helicopters with either two or three blades.
+
+At the alpha = 0.05 level, the p-value of 0.127 indicates that there is not enough evidence to say that this odds ratio is statistically significantly different from one.
+
+A helicopter with 1000 pounds of additional maximum takeoff weight is 0.91 times as likely to have an accident as one without that additional maximum takeoff weight.
+
+At the alpha = 0.05 level, the reported p-value of less than 0.001 indicates that there is sufficient evidence to claim statistical significance.
+
+#### 
+
+\newpage
+
+#### Ex 2:
+
+```{r, echo=FALSE, message=FALSE}
+library(tidyverse)
+library(kableExtra)
+```
+
+```{r, echo=FALSE}
+helicopter_table <- tibble(
+  x = c(
+    "Blade Count",
+    "  4 Blades", "  5 Blades", "  6 Blades",
+    "Engines Count",
+    "Rotor Diameter",
+    "Max Takeoff Weight 1*", "Max Takeoff Weight 2**",
+    "Blade Count\u00d7Engine Count",
+    "4 Blades\u00d7Engine Count", "5 Blades\u00d7Engine Count", "6 Blades\u00d7Engine Count",
+    "Engine Count\u00d7ROTORODIA",
+    "Rotor D\u00d7Max Takeoff Weight 1", "Rotor D\u00d7Max Takeoff Weight 2",
+    "Constant"
+  ),
+  Estimated_Coeff = c(
+    NA, -0.390, 0.792, 0.879, -3.179, 0.264, 1.836, -0.081,
+    NA, 0.147, -1.265, -1.304, 0.083, -0.050, 0.002, -11.147
+  ),
+  Confidence_Interval = c(
+    NA, "(-0.622, -0.158)", "(0.313, 1.272)", "(0.003, 1.755)",
+    "(-5.016, -1.343)", "(0.099, 0.430)", "(0.915, 2.758)", "(-0.124, -0.038)",
+    NA, "(-0.448, 0.742)", "(-2.142, -0.388)", "(-2.960, 0.351)",
+    "(0.040, 0.126)", "(-0.075, -0.025)", "(0.001, 0.003)", "(-16.712, -5.582)"
+  )
+)
+
+helicopter_table <- helicopter_table |>
+  mutate(
+    Estimated_Coeff = ifelse(
+      is.na(Estimated_Coeff), 
+      "", 
+      round(exp(as.numeric(Estimated_Coeff)), 3)
+    ),
+    Confidence_Interval = ifelse(
+      is.na(Confidence_Interval),
+      "",
+      sapply(Confidence_Interval, function(x) {
+        if (is.na(x) || x == "") {
+          ""
+        } else {
+          bounds <- as.numeric(unlist(strsplit(gsub("[()]", "", x), ", ")))
+          paste0("(", paste(round(exp(bounds), 3), collapse = ", "), ")")
+        }
+      })
+    )
+  ) |>
+  select(x, Estimated_Coeff, Confidence_Interval)
+
+helicopter_table$Estimated_Coeff[16] = "<0.001"
+
+helicopter_table |>
+  kable(
+    digits = 2,
+    col.names = c("Variable", "Estimated Coefficient", "95% Confidence Interval"),
+    align = c("l", "c", "c"),
+    caption = "*scaled with power: (x/100)^0.5
+(**scaled with linear term x/100)"
+  ) 
+```
+
+#### Ex 3:
+
+A helicopter with one additional engine is 0.042 times as likely to crash as a helicopter without that additional engine controlling for number of blades, rotor diameter, maximum takeoff weight, and several interactions between those variables. This value is significant in the 95% confidence interval.
+
+A helicopter with 4 blades that has an additional engine is 1.158 times as likely to crash as a four-bladed helicopter without the additional engine, controlling for number of blades, rotor diameter, maximum takeoff weight, and several other interactions between those variables. This value is not significant in the 95% confidence interval.
+
+A helicopter with 5 blades that has an additional engine is 0.282 times as likely to crash as a five-bladed helicopter without the additional engine, controlling for number of blades, rotor diameter, maximum takeoff weight, and several other interactions between those variables. This value is significant in the 95% confidence interval.
+
+A helicopter with 6 blades that has an additional engine is 0.271 times as likely to crash as a six-bladed helicopter without the additional engine, controlling for number of blades, rotor diameter, maximum takeoff weight, and several other interactions between those variables. This value is not significant in the 95% confidence interval.
+
+#### 
+
+#### Ex 4:
+
+Yes, sort of, its complicated, the statistically significant (at the $\alpha = 0.05$ level) coefficient maximum takeoff weight 2, the variable scaled by dividing the max weight by 100, indicates that as maximum weight increases, the odds of crashing decrease. The paper further explains that this odds ratio is not constant across all maximum weight values, which makes intuitive sense. The single engine graph shows us that, between 5,000 and 35,000 pounds, increasing maximum takeoff weight corresponds to an estimated odds ratio less than one. However to satisfy the 95% confidence interval of that estimate, only on the range of 9,000 to 19,500 pounds does this effect persist. For twin-engine helicopters, the upper bound of the 95% CI never drops below 1, indicating that there is not sufficient evidence at any level of maximum takeoff weight that an increase in that maximum would correspond to lower odds of a crash.
+
+#### Ex 5:
+
+While the basic interpretation of the p-value is correct, some of the wording could be improved. Instead of “cannot be rejected” we can say, there is insufficient evidence to reject the null hypothesis that the probability of accidents in each group between estimated and observed values is 0. The last sentence also could be re-worded. This test does not tell us that our model fits exceptionally well, just that it doesnt fit especially poorly so “shows close agreement” is too strongly worded. We should say something like the revised first sentence instead.
