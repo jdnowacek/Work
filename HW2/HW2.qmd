@@ -1,0 +1,128 @@
+---
+title: "HW2"
+format: pdf
+editor: visual
+---
+
+## Data and Packages
+
+```{r, message=FALSE}
+library(tidyverse)
+library(MASS)
+library(broom)
+library(olsrr)
+library(kableExtra)
+d <- read_csv("dat_turan.csv")
+
+d <- d |>
+  rename(
+    twa_map = `TWA MAP`,
+    twa_map1 = `TWA MAP1`,
+    twa_map2 = `TWA MAP2`,
+    min_sa02 = `Min Sao2`,
+    preop_ah_m = `Preop AntiHyper Med`,
+    type_surg = `Type Surg`
+  )
+```
+
+## Table 2
+
+```{r}
+# full_mod <- lm(twa_map ~ Sleeptime + min_sa02 + Age + Female + BMI + Smoking + 
+#                    Diabetes + Hyper + CAD + preop_ah_m + CPAP + type_surg, 
+#                  data = d)
+# 
+# ols_step_backward_p(full_mod, p_val = 0.2)
+
+primary_analysis_mod1 <- lm(twa_map ~ Sleeptime + Smoking + CAD, data = d)
+
+tidy(primary_analysis_mod1, conf.int = TRUE, conf.level = 0.975) |>
+  kable(digits = 3)
+
+primary_analysis_mod2 <- lm(twa_map ~ min_sa02 + Smoking + CAD, data = d)
+
+tidy(primary_analysis_mod2, conf.int = TRUE, conf.level = 0.975) |>
+  kable(digits = 3)
+
+
+
+expl_1_mod1 <- lm(twa_map1 ~ Sleeptime + 
+                    Smoking + CAD + Age + Female + Race + type_surg, data = d)
+
+tidy(expl_1_mod1, conf.int = TRUE, conf.level = 0.9875) |>
+  kable(digits = 3)
+
+expl_1_mod2 <- lm(twa_map1 ~ min_sa02 + 
+                    Smoking + CAD + Age + Female + Race + type_surg, data = d)
+
+tidy(expl_1_mod2, conf.int = TRUE, conf.level = 0.9875) |>
+  kable(digits = 3)
+
+
+
+
+expl_2_mod1 <- lm(twa_map2 ~  Sleeptime + Smoking + CAD , data = d)
+
+tidy(expl_2_mod1, conf.int = TRUE, conf.level = 0.9875) |>
+  kable(digits = 3)
+
+expl_2_mod2 <- lm(twa_map2 ~ min_sa02 + Smoking + CAD , data = d)
+
+tidy(expl_2_mod2, conf.int = TRUE, conf.level = 0.9875) |>
+  kable(digits = 3)
+```
+
+Here we can see that the coefficients for percentage of TST spent at Sao2 \< 90% and Minimum nocturnal Sao2 are very similar to the published model results. The coefficient of Minimum nocturnal Sao2 is of course flipped about 0 as the interpretation of the coefficient is for a one percentage point decrease as opposed to an increase. The estimate for sleeptime is slightly off as well, but the difference is neglibible, even though the estimate is on the opposite side of 0, the CI includes 0 in botht the original and this reproduced model.
+
+Backwards selection was used to identify the necessary predictors in this model, the paper describes which variables are used so the reproduced model simply uses those predictors described. However a piece of code of the form of the one commented above would accomplish the same thing.
+
+## Secondary Analysis
+
+"One hundred fifty-three (54%) patients were given vasopressor intraoperatively."
+
+```{r}
+d |>
+  summarise(percent_vasopressor = sum(Vasopressor == "Yes")/nrow(d))
+```
+
+Receiving vasopressor was not significantly associated with either percentage of total sleep time spent at Sao2 less than 90% (P = 0.86) or minimum nocturnal Sao2 (P = 0.39). 
+
+```{r}
+d <- d |>
+  mutate(vaso_bin = ifelse(Vasopressor == "Yes", 1, 0))
+
+tst_mod <- glm(vaso_bin ~ Sleeptime + Smoking + CAD + Age + 
+                 Female + Race + type_surg, family = binomial, data = d)
+summary(tst_mod)
+
+min_mod <- glm(vaso_bin ~ min_sa02 + Smoking + CAD + Age + 
+                 Female + Race + type_surg, family = binomial, data = d)
+summary(min_mod)
+```
+
+## 
+
+Figure 2
+
+```{r}
+# summary(lm(Sleeptime ~ twa_map, data = d))
+
+d |>
+ggplot(aes(x = Sleeptime, y = twa_map)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  theme_bw() +
+  labs(y = "TWA of MAP (mm Hg)", x = "Sleep Time Under 90% Sa02 (%)")
+
+d <- d |>
+  filter(min_sa02 > 40)
+
+# summary(lm(min_sa02 ~ twa_map, data = d))
+
+d |>
+ggplot(aes(x = min_sa02, y = twa_map)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  theme_bw() +
+  labs(y = "TWA of MAP (mm Hg)", x = "Minimum Nocturnal Sa02")
+```
