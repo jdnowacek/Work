@@ -85,22 +85,56 @@ d |>
   summarise(percent_vasopressor = sum(Vasopressor == "Yes")/nrow(d))
 ```
 
-Receiving vasopressor was not significantly associated with either percentage of total sleep time spent at Sao2 less than 90% (P = 0.86) or minimum nocturnal Sao2 (P = 0.39). 
+Receiving vasopressor was not significantly associated with either percentage of total sleep time spent at Sao2 less than 90% (P = 0.86) or minimum nocturnal Sao2 (P = 0.39). The estimated odds ratio of receiving vasopressor was 1.00 (97.5% CI, 0.99 to 1.01) for each 1% absolute increase in percentage of total sleep time spent at Sao2 less than 90% and 1.01 (0.98 to 1.04) for each 1% absolute decrease in minimum nocturnal Sao2. 
 
 ```{r}
 d <- d |>
   mutate(vaso_bin = ifelse(Vasopressor == "Yes", 1, 0))
 
-tst_mod <- glm(vaso_bin ~ Sleeptime + Smoking + CAD + Age + 
-                 Female + Race + type_surg, family = binomial, data = d)
+tst_mod <- glm(vaso_bin ~ Sleeptime + Smoking + BMI + Age + 
+                 CAD + Hyper + type_surg, family = binomial, data = d)
 summary(tst_mod)
 
-min_mod <- glm(vaso_bin ~ min_sa02 + Smoking + CAD + Age + 
-                 Female + Race + type_surg, family = binomial, data = d)
+min_mod <- glm(vaso_bin ~ I(-min_sa02) + Smoking + BMI + Age + 
+                 CAD + Hyper + type_surg, family = binomial, data = d)
 summary(min_mod)
 ```
 
-## 
+Here are the exponentiated coefficents (representing odds ratios) and CIs from the previous models.
+
+```{r}
+exp(tst_mod[["coefficients"]][["Sleeptime"]])
+exp(confint.default(tst_mod, level = 0.975)["Sleeptime", ])
+
+exp(min_mod[["coefficients"]][["I(-min_sa02)"]])
+exp(confint.default(min_mod, level = 0.975)["I(-min_sa02)", ])
+```
+
+The estimated average change in the total dose of vasopressor was −3 (97.5% CI, −14 to 8) μg for each 1% absolute increase in the percentage of total sleep time spent at Sao2 less than 90% (P = 0.59), after adjusting for age, sex, and preoperative use of antihypertensive medications. The estimated change in the dose was 9 (−16, 34) μg for each 1% absolute decrease in the minimum nocturnal Sao2 (P = 0.41), after adjusting for age, sex, smoking, diabetes, and preoperative use of antihypertensive medications.
+
+```{r}
+d  <- d |>
+  filter(`Epinephrine` == "No", Vasopressor == "Yes") |>
+  mutate(v_tot = `Ephedrine Amt` * 125 + `Phenylephrine Amt`)
+```
+
+```{r}
+vaso_mod1 <- lm(v_tot ~ Sleeptime + Female + Age + preop_ah_m, 
+                data = d)
+summary(vaso_mod1)
+
+vaso_mod2 <- lm(v_tot ~ I(-min_sa02) + Smoking + Female + Age + 
+                 Diabetes + preop_ah_m, data = d)
+summary(vaso_mod2)
+
+
+
+vaso_mod1[["coefficients"]][["Sleeptime"]]
+confint.default(vaso_mod1, level = 0.975)["Sleeptime", ]
+
+vaso_mod2[["coefficients"]][["I(-min_sa02)"]]
+confint.default(vaso_mod2, level = 0.975)["I(-min_sa02)", ]
+```
 
 Figure 2
 
